@@ -1,0 +1,113 @@
+pipeline {
+    environment {
+        registry = "172.21.4.84:8083"
+        registry_proxy = "registry.devopsnonprd.vayuktbcs:8082"
+        sshUser = "elaasuser01"
+        buildEnv = "dev"
+        deployment = "kong-api-gw"
+        imageName = "elaas/$buildEnv/$deployment"
+        namespace = "elaas-dev"
+        service = "$deployment-service"
+        ingress = "$deployment-dev.app.elaas"
+        port = "8000"
+        majorBuild = "0"
+        minorBuild = "5"
+        buildVersion = "$majorBuild.$minorBuild.${BUILD_NUMBER}"
+        sshInfo = "$sshUser@172.21.4.99"
+        pathApp = "/home/$sshUser/scripts/jenkins/$deployment/$buildEnv"
+
+        resourcePath = "$WORKSPACE/deployment/resources"
+        registryCredential = "dockerhub-nonprod"
+        replica = "1"
+        cpuReq = "1"
+        cpuLimit = "1"
+        imagePullSecrets = "tmunixcredential"
+        pluginsCustomAuthPath = "$WORKSPACE/plugins/custom-auth/kong/plugins/custom-auth"
+        hpaMaxReplica = "4"
+        hpaCpuThreshold = "70"
+        dbName = "kong"
+        dbHost = "172.21.2.55"
+        dbUser = "kongadm"
+        dbPass = "kong@123"
+    }
+    agent any
+    stages {
+        stage('Pull image') {
+            steps {
+                script {
+                    a = docker.image("${env.registry_proxy}" + "/" + "kong:2.4-centos")
+                    docker.withRegistry("https://" + "${env.registry_proxy}", "${env.registryCredential}") {
+                        a.pull()
+                    }
+                    
+                }
+            }
+        }
+
+        stage('Build DockerFile') {
+            steps {
+                sh "sed -i 's|jenkins-namespace|$namespace|g' $pluginsCustomAuthPath/schema.lua"
+                script {
+                    a = docker.build("${env.registry}" + "/" + "${env.imageName}" + ":"+"${buildVersion}", "-f $resourcePath/Dockerfile .")
+                    docker.withRegistry("http://" + "${env.registry}", "${env.registryCredential}") {
+                        a.push()
+                    }
+                }
+            }
+        }
+
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sshagent (credentials: ['bastion-elaas'])
+                {
+                    sh "sed -i 's|jenkins-namespace|$namespace|g' $resourcePath/namespace.yaml"
+                    sh "sed -i 's|jenkins-namespace|$namespace|g' $resourcePath/deployment.yaml"
+                    sh "sed -i 's|jenkins-deployment|$deployment|g' $resourcePath/deployment.yaml"
+                    sh "sed -i 's|jenkins-replica|$replica|g' $resourcePath/deployment.yaml"
+                    sh "sed -i 's|jenkins-cpu-req|$cpuReq|g' $resourcePath/deployment.yaml"
+                    sh "sed -i 's|jenkins-cpu-limit|$cpuLimit|g' $resourcePath/deployment.yaml"
+                    sh "sed -i 's|jenkins-pull-secret|$imagePullSecrets|g' $resourcePath/deployment.yaml"
+                    sh "sed -i 's|jenkins-db-name|$dbName|g' $resourcePath/deployment.yaml"
+                    sh "sed -i 's|jenkins-db-host|$dbHost|g' $resourcePath/deployment.yaml"
+                    sh "sed -i 's|jenkins-db-user|$dbUser|g' $resourcePath/deployment.yaml"
+                    sh "sed -i 's|jenkins-db-pass|$dbPass|g' $resourcePath/deployment.yaml"
+                    sh "sed -i 's|image-container|$registry/$imageName:$buildVersion|g' $resourcePath/deployment.yaml"
+                    sh "sed -i 's|jenkins-namespace|$namespace|g' $resourcePath/service.yaml"
+                    sh "sed -i 's|jenkins-deployment|$deployment|g' $resourcePath/service.yaml"
+                    sh "sed -i 's|jenkins-service|$service|g' $resourcePath/service.yaml"
+                    sh "sed -i 's|jenkins-port|$port|g' $resourcePath/service.yaml"
+
+
+                    sh "sed -i 's|jenkins-namespace|$namespace|g' $resourcePath/ingress.yaml"
+                    sh "sed -i 's|jenkins-service|$service|g' $resourcePath/ingress.yaml"
+                    sh "sed -i 's|jenkins-deployment|$deployment|g' $resourcePath/ingress.yaml"
+                    sh "sed -i 's|jenkins-port|$port|g' $resourcePath/ingress.yaml"
+                    sh "sed -i 's|jenkins-ingress|$ingress|g' $resourcePath/ingress.yaml"
+
+                    // hpa
+                    sh "sed -i 's|jenkins-namespace|$namespace|g' $resourcePath/hpa.yaml"
+                    sh "sed -i 's|jenkins-deployment|$deployment|g' $resourcePath/hpa.yaml"
+                    sh "sed -i 's|jenkins-replica|$replica|g' $resourcePath/hpa.yaml"
+                    sh "sed -i 's|jenkins-max-replica|$hpaMaxReplica|g' $resourcePath/hpa.yaml"
+                    sh "sed -i 's|jenkins-cpu-threshold|$hpaCpuThreshold|g' $resourcePath/hpa.yaml"
+
+
+
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no $sshInfo mkdir -p $pathApp
+                        scp $resourcePath/* $sshInfo:$pathApp
+
+                        ssh -o StrictHostKeyChecking=no $sshInfo kubectl apply -f $pathApp/deployment.yaml
+                        ssh -o StrictHostKeyChecking=no $sshInfo kubectl apply -f $pathApp/service.yaml
+                        #ssh -o StrictHostKeyChecking=no $sshInfo kubectl apply -f $pathApp/hpa.yaml
+                        ssh -o StrictHostKeyChecking=no $sshInfo kubectl apply -f $pathApp/ingress.yaml
+
+                    '''
+                }
+           	}
+        }
+
+    }
+}
+

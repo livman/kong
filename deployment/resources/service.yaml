@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: jenkins-service
+  name: jenkins-service
+  namespace: jenkins-namespace
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+    - name: http-admin
+      protocol: TCP
+      port: 8001
+      targetPort: 8001
+    - name: https
+      protocol: TCP
+      port: 8444
+      targetPort: 8444
+  selector:
+    app: jenkins-deployment

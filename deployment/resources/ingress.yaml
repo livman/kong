@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jenkins-deployment
+  namespace: jenkins-namespace
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+
+spec:
+  tls:
+    - hosts:
+        - jenkins-ingress
+      secretName: internal-tls
+  ingressClassName: nginx
+  rules:
+    - host: jenkins-ingress
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jenkins-service
+                port:
+                  number: jenkins-port

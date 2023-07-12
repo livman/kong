@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: jenkins-deployment
+  name: jenkins-deployment
+  namespace: jenkins-namespace
+spec:
+  replicas: jenkins-replica
+  selector:
+    matchLabels:
+      app: jenkins-deployment
+  template:
+    metadata:
+      labels:
+        app: jenkins-deployment
+    spec:
+      imagePullSecrets:
+        - name: jenkins-pull-secret
+      containers:
+        - env:
+            - name: KONG_PLUGINS
+              value: "bundled,custom-auth,custom-header,circuit-breaker"
+            - name: KONG_DATABASE
+              value: "postgres"
+            - name: KONG_PG_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: db-postgres-cred
+                  key: host
+            - name: KONG_PG_DATABASE
+              value: jenkins-db-name
+            - name: KONG_PG_USER
+              value: jenkins-db-user
+            - name: KONG_PG_PASSWORD
+              value: jenkins-db-pass
+            - name: KONG_CASSANDRA_CONTACT_POINTS
+              valueFrom:
+                secretKeyRef:
+                  name: db-postgres-cred
+                  key: host
+            - name: KONG_PROXY_ACCESS_LOG
+              value: "/dev/stdout custom_log"
+            - name: KONG_ADMIN_ACCESS_LOG
+              value: "/dev/stdout"
+            - name: KONG_PROXY_ERROR_LOG
+              value: "/dev/stderr"
+            - name: KONG_ADMIN_ERROR_LOG
+              value: "/dev/stderr"
+            - name: KONG_ADMIN_LISTEN
+              value: "0.0.0.0:8001, 0.0.0.0:8444 ssl"
+            - name: KONG_HEADERS
+              value: "off"
+            #- name: KONG_UPSTREAM_KEEPALIVE_MAX_REQUESTS
+            #  value: "128"
+            - name: KONG_NGINX_HTTP_LOG_FORMAT
+              value: "custom_log '[$time_local] realip_remote_addr=> $realip_remote_addr , http_x_forwarded_for => $http_x_forwarded_for , remote addr=> $remote_addr , remote_user=> $remote_user , server_name=> $server_name , host=> $host , upstream addr=> $proxy_host($upstream_addr), request=> $request, status=> $status, upstream_response_time=> $upstream_response_time , msec=> $msec , request_time=> $request_time'"
+          image: image-container
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          resources:
+            limits:
+              cpu: jenkins-cpu-limit
+              memory: "1Gi"
+            requests:
+              cpu: jenkins-cpu-req
+              memory: "500Mi"
+          name: jenkins-deployment
+

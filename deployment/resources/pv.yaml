@@ -1,0 +1,19 @@
+# pv.yaml
+#apiVersion: v1
+#kind: PersistentVolume
+#metadata:
+#  name: pv-jenkins-deployment-static
+#  namespace: jenkins-namespace
+#spec:
+#  capacity:
+#    storage: jenkins-nas-size
+#  accessModes:
+#    - ReadWriteMany
+#  persistentVolumeReclaimPolicy: Retain
+#  claimRef:
+#    name: pvc-jenkins-deployment
+#    namespace: jenkins-namespace
+#  nfs:
+#    path: /nfsshare/exports/welfare01/static/jenkins-deployment
+#    server: 100.127.221.71
+#    readOnly: false

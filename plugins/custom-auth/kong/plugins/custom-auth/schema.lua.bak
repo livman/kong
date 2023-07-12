@@ -1,0 +1,61 @@
+local typedefs = require "kong.db.schema.typedefs"
+
+return {
+  --name = "custom-auth"
+  no_consumer = true,
+  fields      = {
+    keycloakEndpoint = {
+      type     = "string",
+      required = true,
+      default  = "http://custom-kc:8080"
+    },
+    keycloakClientId = {
+      type     = "string",
+      required = true,
+      default  = "custom-kong"
+    },
+    keycloakClientSecret = {
+      type     = "string",
+      required = true,
+      default  = "7874952d-f4ac-47bd-95c9-1e8ab709c492"
+    },
+    keycloakRealms = {
+      type     = "string",
+      required = true,
+      default  = "kong"
+    },
+    keycloakAdminUser = {
+      type     = "string",
+      required = true,
+      default  = "admin"
+    },
+    keycloakAdminPassword = {
+      type     = "string",
+      required = true,
+      default  = "admin"
+    },
+    keycloakPubKey = {
+      type     = "string",
+      required = true,
+      default  = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAk9HBsVNzDO0nwbCzqXvqTjOKU0MQqn/E3pHt4COhtzoFnOzZHd1Chd+/df45OBn9Obrug/zAXoZxmaq1vKf0q62E8xSt/u5siaShD1+Nw4UQVyB3L7pvunDkIv3LdEG0ML9wK+U+K002mPQIcrX/oEC80HNSKhGXoQ84D+/fB5K/zcgJG733lr1GnFTelfzTal8YNUl60NhDBd2UhZQY/Pg8tUPr42cvACi5Ld8vdKBISLnfYgN7SN2mrRk6xPZc+cchWcVWx2ZGWpk3DF4y6QsYGFFWyQCH7f43qWQnBguJ2EyIfcIVtG91kObVtsrWpHzJ0DPT5mT2ZKoCCyjwVQIDAQAB"
+    },
+    userServiceName = {
+      type     = "string",
+      required = false,
+      default  = "auth-service"
+    },
+    userServiceEndpoint = {
+      type     = "string",
+      required = false,
+      default  = "/api/auth/v1"
+    },
+    selfVerifyToken = {
+      type     = "boolean",
+      default  = true
+    },
+    authVerifyTokenEndpoint = {
+      type     = "string",
+      default  = "http://localhost:9090/auth/verifyToken"
+    }
+  }
+}

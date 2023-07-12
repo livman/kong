@@ -1,0 +1,13 @@
+# pvc.yaml
+#apiVersion: v1
+#kind: PersistentVolumeClaim
+#metadata:
+#  name: pvc-jenkins-deployment
+#  namespace: jenkins-namespace
+#spec:
+#  volumeName: pv-jenkins-deployment-static
+#  accessModes:
+#    - ReadWriteMany
+#  resources:
+#    requests:
+#      storage: jenkins-nas-size

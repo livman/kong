@@ -1,0 +1,75 @@
+local BasePlugin = require "kong.plugins.base_plugin"
+
+local CustomAuthHandler = BasePlugin:extend()
+local cache = kong.cache
+
+local access = require "kong.plugins.custom-auth.access"
+
+--local inspect = require('inspect')
+
+CustomAuthHandler.PRIORITY = 2000
+CustomAuthHandler.VERSION = "0.1.0"
+
+function CustomAuthHandler:new()
+  CustomAuthHandler.super.new(self, "custom-auth")
+
+  CustomAuthHandler.PRIORITY = 10
+
+  self.echo_string = ""
+
+  --kong.log("In EchoHandler:new(). self.echo_string is: " .. self.echo_string)
+end
+
+function CustomAuthHandler:access(conf)
+  CustomAuthHandler.super.access(self)
+
+  
+
+  --kong.log("In EchoHandler:accept(). self.echo_string is: " .. self.echo_string)
+
+  print(CustomAuthHandler.PRIORITY)
+
+  local route = kong.router.get_route()
+  local service = kong.router.get_service()
+
+  --self.echo_string = kong.request.get_header(conf.requestHeader)
+
+  --kong.log.inspect("get route: ", route)
+  kong.log.inspect("get current service name: ", service.name)
+  kong.log.inspect("user service name: ", conf.userServiceName)
+
+  --if not string.match(service.name, conf.userServiceName) then
+  --  access.run(conf)
+  --end
+
+  kong.log.inspect("is match service: ", service.name == conf.userServiceName)
+
+  if service.name == conf.userServiceName then
+    if ngx.var.uri == conf.userServiceEndpoint .."/authen" then
+      access.authen(conf)
+    else
+      access.userManipulate(conf)
+    end
+  else
+    access.routeFilter(conf)
+  end
+
+  --if string.match(ngx.var.uri, conf.userServiceEndpoint .."/authen") then
+  --  access.authen(conf)
+  --elseif string.match(ngx.var.uri, conf.userServiceEndpoint .."/refresh") or string.match(ngx.var.uri, conf.userServiceEndpoint .."/createUser") then
+  --  access.userManipulate(conf)
+  --else
+  --  access.routeFilter(conf)
+  --end
+
+  --access.run(conf)
+
+  --kong.log.inspect(config.keycloakEndpoint)
+
+  
+end
+
+
+
+
+return CustomAuthHandler
